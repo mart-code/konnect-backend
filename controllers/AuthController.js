@@ -82,3 +82,26 @@ export const login = async (req, res, next)=>{
         return res.status(500).send('Internal Server Error')
     }
 }
+
+export const getUserInfo = async (req, res, next) => {
+    try {
+        const userData = await User.findById(req.userId);
+        if (!userData) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+   return res.status(201).json({
+         
+                email: userData.email,
+                id: userData._id,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                image: userData.image,
+                color: userData.color,
+                profileSetup: userData.profileSetup
+       
+        });
+    }catch (error) {
+        
+    }
+}
