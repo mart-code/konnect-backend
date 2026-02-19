@@ -90,6 +90,42 @@ export const getUserInfo = async (req, res, next) => {
             return res.status(404).json({ message: "User not found" });
         }
 
+   return res.status(200).json({
+         
+                email: userData.email,
+                id: userData._id,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                image: userData.image,
+                color: userData.color,
+                profileSetup: userData.profileSetup
+       
+        });
+    }catch (error) {
+        console.log(error);
+        return res.status(500).json({message: "Internal Server Error"});
+    }
+}
+
+export const updateProfile = async (req, res, next) => {
+    try {
+        const {userId} = req;
+        const {firstName, lastName, image, color} = req.body;
+        if(!firstName || !lastName || !color) {
+            return res.status(400).json({message: "First name, last name and color are required"})
+        }
+
+        const userData = await User.findByIdAndUpdate(userId, {
+            firstName,
+            lastName, color,
+            profileSetup: true,
+          
+        }, {new: true, runValidators: true});
+    
+        if (!userData) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
    return res.status(201).json({
          
                 email: userData.email,
@@ -102,6 +138,7 @@ export const getUserInfo = async (req, res, next) => {
        
         });
     }catch (error) {
-        
+        console.log(error);
+        return res.status(500).json({message: "Internal Server Error"});
     }
 }
