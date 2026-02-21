@@ -3,20 +3,37 @@ import Message from "./models/Message.js";
 
 // Maps userId (string) → socket.id so we can reach specific users for call signaling
 const userSocketMap = {};
+let ioInstance = null;
 
 const getRoomId = (userId1, userId2) =>
   `dm_${[userId1, userId2].sort().join("_")}`;
 
+/**
+ * emitToUser — helper to send an event to a specific user's socket
+ */
+export const emitToUser = (userId, event, data) => {
+  const socketId = userSocketMap[userId];
+  if (socketId && ioInstance) {
+    ioInstance.to(socketId).emit(event, data);
+  }
+};
+
 export const initSocket = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.ORIGIN,
+      origin: (origin, callback) => {
+        const allowedOrigin = process.env.ORIGIN === "*" ? origin : process.env.ORIGIN;
+        callback(null, allowedOrigin);
+      },
       methods: ["GET", "POST"],
       credentials: true,
     },
   });
 
+  ioInstance = io;
+
   io.on("connection", (socket) => {
+
     const userId = socket.handshake.query.userId;
 
     if (userId) {

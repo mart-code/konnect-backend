@@ -1,5 +1,6 @@
 import User from "../models/UserModel.js";
 import FriendRequest from "../models/FriendRequest.js";
+import { emitToUser } from "../socket.js";
 
 // Search users by email (excluding self)
 export const searchUsers = async (req, res) => {
@@ -53,6 +54,12 @@ export const sendFriendRequest = async (req, res) => {
       receiver: receiverId,
     });
 
+    // Populate sender for the real-time notification
+    const populatedRequest = await FriendRequest.findById(request._id).populate("sender", "_id email firstName lastName image color");
+
+    // Notify receiver in real-time
+    emitToUser(receiverId, "newFriendRequest", populatedRequest);
+
     return res.status(201).json(request);
   } catch (error) {
     console.error(error);
@@ -84,6 +91,12 @@ export const acceptFriendRequest = async (req, res) => {
     });
     await User.findByIdAndUpdate(request.sender, {
       $addToSet: { friends: req.userId },
+    });
+
+    // Notify original sender that their request was accepted
+    emitToUser(request.sender.toString(), "friendRequestAccepted", {
+      friendId: req.userId,
+      friendName: sender.firstName || sender.email
     });
 
     return res.status(200).json({ message: "Friend request accepted" });

@@ -26,7 +26,10 @@ const databaseUrl = process.env.DATABASE_URL;
 
 app.use(
   cors({
-    origin: [process.env.ORIGIN],
+    origin: (origin, callback) => {
+      const allowedOrigin = process.env.ORIGIN === "*" ? origin : process.env.ORIGIN;
+      callback(null, allowedOrigin);
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
