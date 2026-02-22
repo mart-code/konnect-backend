@@ -6,7 +6,7 @@ export const getFeed = async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("friends");
 
-    const posts = await Post.find({ author: { $in: user.friends } })
+    const posts = await Post.find({ author: { $in: [req.userId, ...user.friends] } })
       .populate("author", "_id email firstName lastName image color")
       .sort({ createdAt: -1 })
       .limit(50);

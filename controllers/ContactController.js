@@ -94,12 +94,37 @@ export const acceptFriendRequest = async (req, res) => {
     });
 
     // Notify original sender that their request was accepted
+    // Note: We need to find the sender's info to get names for notification
+    const me = await User.findById(req.userId).select("firstName email");
+
     emitToUser(request.sender.toString(), "friendRequestAccepted", {
       friendId: req.userId,
-      friendName: sender.firstName || sender.email
+      friendName: me.firstName || me.email
     });
 
     return res.status(200).json({ message: "Friend request accepted" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Reject a friend request
+export const rejectFriendRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const request = await FriendRequest.findOneAndDelete({
+      _id: requestId,
+      receiver: req.userId,
+      status: "pending",
+    });
+
+    if (!request) {
+      return res.status(404).json({ message: "Friend request not found" });
+    }
+
+    return res.status(200).json({ message: "Friend request rejected" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
