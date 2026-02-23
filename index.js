@@ -14,6 +14,11 @@ import MessagesRoutes from "./routes/MessagesRoute.js";
 import GroupRoutes from "./routes/GroupRoute.js";
 import TaskRoutes from "./routes/TaskRoute.js";
 import { initSocket } from "./socket.js";
+import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@as-integrations/express5";
+import { typeDefs } from "./graphql/typeDefs.js";
+import { resolvers } from "./graphql/resolvers.js";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -47,6 +52,32 @@ app.use("/api/posts", PostRoutes);
 app.use("/api/messages", MessagesRoutes);
 app.use("/api/groups", GroupRoutes);
 app.use("/api/tasks", TaskRoutes);
+
+// ─── GRAPHQL ─────────────────────────────────────────────────────────────────
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
+
+await server.start();
+
+app.use(
+  "/graphql",
+  expressMiddleware(server, {
+    context: async ({ req }) => {
+      const token = req.cookies.jwt;
+      if (token) {
+        try {
+          const payload = jwt.verify(token, process.env.JWT_KEY);
+          return { userId: payload.userId };
+        } catch (err) {
+          // Invalid token, context will have no userId
+        }
+      }
+      return {};
+    },
+  })
+);
 
 app.get("/", (_req, res) => {
   res.send("Konnect API is running.");
