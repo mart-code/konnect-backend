@@ -21,14 +21,14 @@ import { resolvers } from "./graphql/resolvers.js";
 import jwt from "jsonwebtoken";
 
 dotenv.config();
-
+//Setting up file and file directory variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
+//Created express app and database string plus port string
 const app = express();
 const port = process.env.PORT || 5000;
 const databaseUrl = process.env.DATABASE_URL;
-
+//
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -71,6 +71,7 @@ app.use(
           const payload = jwt.verify(token, process.env.JWT_KEY);
           return { userId: payload.userId };
         } catch (err) {
+       
           // Invalid token, context will have no userId
         }
       }

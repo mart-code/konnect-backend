@@ -163,6 +163,22 @@ export const resolvers = {
       });
       return await group.populate("admin members");
     },
+    addMembersToGroup: async (_, { groupId, members }, { userId }) => {
+      if (!userId) throw new Error("Unauthorized");
+      const group = await Group.findById(groupId);
+      if (!group) throw new Error("Group not found");
+
+      // Optional: Only allow admin to add members
+      // if (group.admin.toString() !== userId) throw new Error("Only admin can add members");
+
+      const updatedGroup = await Group.findByIdAndUpdate(
+        groupId,
+        { $addToSet: { members: { $each: members } } },
+        { new: true }
+      ).populate("admin members");
+
+      return updatedGroup;
+    },
   },
   // Map _id to id for GraphQL compatibility if needed, 
   // though many setups handle this automatically.

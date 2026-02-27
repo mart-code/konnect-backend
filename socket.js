@@ -97,13 +97,24 @@ export const initSocket = (httpServer) => {
       }
     });
 
-    // endCall: notify the remote peer that the call ended
     // Payload: { to: userId }
     socket.on("endCall", ({ to }) => {
       const targetSocket = userSocketMap[to];
       if (targetSocket) {
         io.to(targetSocket).emit("callEnded");
       }
+    });
+
+    // ─── GROUP CALL SIGNALING ──────────────────────────────────────────
+    // startGroupCall: broadcast to group room that a call has started
+    socket.on("startGroupCall", ({ groupId, from }) => {
+      socket.to(`group_${groupId}`).emit("incomingGroupCall", { from, groupId });
+    });
+
+    // joinGroupCall: notify members about join (for simplicity, we'll use existing signaling for peer-to-peer if needed, 
+    // or just broadcast presence)
+    socket.on("joinGroupCall", ({ groupId, user }) => {
+      socket.to(`group_${groupId}`).emit("memberJoinedGroupCall", { user });
     });
 
     // ─── DISCONNECT ──────────────────────────────────────────────────

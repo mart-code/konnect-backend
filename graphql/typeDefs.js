@@ -74,5 +74,6 @@ export const typeDefs = `#graphql
     updateTaskStatus(taskId: ID!, status: String!): Task
     deleteTask(taskId: ID!): String
     createGroup(name: String!, members: [ID!]!): Group
+    addMembersToGroup(groupId: ID!, members: [ID!]!): Group
   }
 `;
