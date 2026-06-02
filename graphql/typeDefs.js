@@ -32,6 +32,7 @@ export const typeDefs = `#graphql
     title: String!
     status: String!
     createdAt: String
+    updatedAt: String
   }
 
   type Group {

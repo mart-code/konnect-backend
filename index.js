@@ -1,3 +1,7 @@
+import dns from 'node:dns/promises';
+dns.setServers(['1.1.1.1', '8.8.8.8']); 
+
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -18,7 +22,7 @@ import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
 import { typeDefs } from "./graphql/typeDefs.js";
 import { resolvers } from "./graphql/resolvers.js";
-import jwt from "jsonwebtoken";
+import { getUserIdFromRequest } from "./middlewares/AuthMiddleware.js";
 
 dotenv.config();
 
@@ -65,16 +69,11 @@ app.use(
   "/graphql",
   expressMiddleware(server, {
     context: async ({ req }) => {
-      const token = req.cookies.jwt;
-      if (token) {
-        try {
-          const payload = jwt.verify(token, process.env.JWT_KEY);
-          return { userId: payload.userId };
-        } catch (err) {
-          // Invalid token, context will have no userId
-        }
+      try {
+        return { userId: getUserIdFromRequest(req) };
+      } catch (_err) {
+        return {};
       }
-      return {};
     },
   })
 );

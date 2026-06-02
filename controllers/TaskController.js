@@ -3,7 +3,7 @@ import Task from "../models/Task.js";
 // Get all tasks for the current user
 export const getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ user: req.userId }).sort({ createdAt: 1 });
+    const tasks = await Task.find({ user: req.userId }).sort({ updatedAt: 1 });
     return res.status(200).json(tasks);
   } catch (error) {
     console.error(error);
@@ -33,11 +33,7 @@ export const updateTask = async (req, res) => {
     const { id } = req.params;
     const { title, status } = req.body;
 
-    const task = await Task.findOneAndUpdate(
-      { _id: id, user: req.userId },
-      { ...(title && { title }), ...(status && { status }) },
-      { new: true, runValidators: true }
-    );
+    const task = await Task.findOneAndUpdate({ _id: id, user: req.userId }, { ...(title && { title }), ...(status && { status }) }, { new: true, runValidators: true });
 
     if (!task) {
       return res.status(404).json({ message: "Task not found" });

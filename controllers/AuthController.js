@@ -3,11 +3,35 @@ import User from "../models/UserModel.js";
 import jwt from "jsonwebtoken";
 
 const maxAge = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
+const tokenMaxAge = "3d";
 
 const createToken = (email, userId) => {
     return jwt.sign({email, userId
-    }, process.env.JWT_KEY, {expiresIn: maxAge})
+    }, process.env.JWT_KEY, {expiresIn: tokenMaxAge})
 }
+
+const getCookieOptions = () => {
+    const isProduction = process.env.NODE_ENV === "production";
+
+    return {
+        maxAge,
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "None" : "Lax",
+    };
+};
+
+
+function validateEmail(email) {
+  const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+  return emailRegex.test(email);
+}
+
+function validatePassword(password) {
+  const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  return passwordRegex.test(password);
+}
+
 
 export const signUp = async (req, res, next) => {
     try {
@@ -17,12 +41,19 @@ export const signUp = async (req, res, next) => {
 
         }
 
+        if(!validateEmail(email)){
+            return res.status(400).send('Invalid email or email format')
+        }
+
+        if(!validatePassword(password)){
+            return res.status(400).send('Invalid password, password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character')
+        }
+        const existingUser = await User.findOne({email});
+        if(existingUser){
+            return res.status(400).send('Email already exists, Login instead')
+        }
         const user = await User.create({email, password});
-        res.cookie("jwt", createToken(email, user.id), {
-          maxAge,
-          secure: true,
-          sameSite: "None",
-        }); 
+        res.cookie("jwt", createToken(email, user.id), getCookieOptions()); 
 
         return res.status(201).json({
             user: {
@@ -59,11 +90,7 @@ export const login = async (req, res, next)=>{
         if(!auth){
             return res.status(400).send('Password is incorrect');
         }
-        res.cookie("jwt", createToken(email, user.id), {
-          maxAge,
-          secure: true,
-          sameSite: "None",
-        }); 
+        res.cookie("jwt", createToken(email, user.id), getCookieOptions()); 
 
         return res.status(201).json({
             user: {
@@ -145,7 +172,7 @@ export const updateProfile = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
     try {
-        res.cookie("jwt", "", { maxAge: 1, secure: true, sameSite: "None" });
+        res.cookie("jwt", "", { ...getCookieOptions(), maxAge: 1 });
         return res.status(200).send("Logged out successfully");
     } catch (error) {
         console.log(error);

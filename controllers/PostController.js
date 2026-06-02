@@ -7,7 +7,7 @@ export const getFeed = async (req, res) => {
     const user = await User.findById(req.userId).select("friends");
 
     const posts = await Post.find({ author: { $in: [req.userId, ...user.friends] } })
-      .populate("author", "_id email firstName lastName image color")
+      .populate("author", "_id email firstName lastName image color updatedAt")
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -31,7 +31,7 @@ export const createPost = async (req, res) => {
       content: content.trim(),
     });
 
-    const populated = await post.populate("author", "_id email firstName lastName image color");
+    const populated = await post.populate("author", "_id email firstName lastName image color timestamp");
 
     return res.status(201).json(populated);
   } catch (error) {

@@ -34,7 +34,7 @@ export const resolvers = {
     },
     getTasks: async (_, __, { userId }) => {
       if (!userId) return [];
-      return await Task.find({ user: userId }).sort({ createdAt: -1 });
+      return await Task.find({ user: userId }).sort({ updatedAt: -1 });
     },
     getGroups: async (_, __, { userId }) => {
       if (!userId) return [];
