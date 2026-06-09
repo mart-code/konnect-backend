@@ -15,6 +15,9 @@ export const typeDefs = `#graphql
     author: User!
     content: String!
     likes: [User]
+    likesCount: Int!
+    isLiked: Boolean!
+    comments: [Comment]
     createdAt: String
     updatedAt: String
   }
@@ -68,6 +71,8 @@ export const typeDefs = `#graphql
 
   type Mutation {
     createPost(content: String!): Post
+    togglePostLike(postId: ID!): Post
+    createComment(postId: ID!, content: String!): Comment
     acceptFriendRequest(requestId: ID!): String
     rejectFriendRequest(requestId: ID!): String
     sendFriendRequest(receiverId: ID!): FriendRequest
@@ -75,5 +80,13 @@ export const typeDefs = `#graphql
     updateTaskStatus(taskId: ID!, status: String!): Task
     deleteTask(taskId: ID!): String
     createGroup(name: String!, members: [ID!]!): Group
+  }
+
+  type Comment {
+    id: ID!
+    author: User!
+    content: String!
+    createdAt: String
+    updatedAt: String
   }
 `;

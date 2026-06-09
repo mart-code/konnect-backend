@@ -5,6 +5,14 @@ import { emitToUser } from "../socket.js";
 import Task from "../models/Task.js";
 import Group from "../models/Group.js";
 import Message from "../models/Message.js";
+import Comment from "../models/Comment.js";
+
+const getIdString = (value) => {
+  if (!value) return "";
+  return (value._id || value).toString();
+};
+
+const userPublicFields = "_id email firstName lastName image color profileSetup";
 
 export const resolvers = {
   Query: {
@@ -15,14 +23,21 @@ export const resolvers = {
     getFeed: async (_, __, { userId }) => {
       if (!userId) return [];
       const user = await User.findById(userId).select("friends");
+      if (!user) return [];
       return await Post.find({ author: { $in: [userId, ...user.friends] } })
         .populate("author")
+        .populate({
+          path: "comments",
+          populate: { path: "author" },
+        })
+        .populate("likes")
         .sort({ createdAt: -1 })
         .limit(50);
     },
     getFriends: async (_, __, { userId }) => {
       if (!userId) return [];
-      const user = await User.findById(userId).populate("friends");
+      const user = await User.findById(userId).populate("friends", userPublicFields);
+      if (!user) return [];
       return user.friends;
     },
     getPendingRequests: async (_, __, { userId }) => {
@@ -30,7 +45,7 @@ export const resolvers = {
       return await FriendRequest.find({
         receiver: userId,
         status: "pending",
-      }).populate("sender");
+      }).populate("sender receiver", userPublicFields);
     },
     getTasks: async (_, __, { userId }) => {
       if (!userId) return [];
@@ -57,10 +72,11 @@ export const resolvers = {
     },
     searchUsers: async (_, { q }, { userId }) => {
       if (!userId || q.trim().length < 2) return [];
+      const searchRegex = { $regex: q.trim(), $options: "i" };
       return await User.find({
         _id: { $ne: userId },
-        email: { $regex: q, $options: "i" },
-      });
+        $or: [{ email: searchRegex }, { firstName: searchRegex }, { lastName: searchRegex }],
+      }).select(userPublicFields);
     },
   },
   Mutation: {
@@ -69,23 +85,33 @@ export const resolvers = {
       if (receiverId === userId) throw new Error("Cannot send friend request to yourself");
 
       const sender = await User.findById(userId);
+      if (!sender) throw new Error("User not found");
+
+      const receiver = await User.findById(receiverId).select("_id");
+      if (!receiver) throw new Error("Receiver not found");
+
       if (sender.friends.some((f) => f.toString() === receiverId)) {
         throw new Error("Already friends");
       }
 
       const existing = await FriendRequest.findOne({
-        sender: userId,
-        receiver: receiverId,
+        $or: [
+          { sender: userId, receiver: receiverId },
+          { sender: receiverId, receiver: userId },
+        ],
         status: "pending",
       });
-      if (existing) throw new Error("Friend request already sent");
+      if (existing) throw new Error("Friend request already exists");
 
       const request = await FriendRequest.create({
         sender: userId,
         receiver: receiverId,
       });
 
-      const populatedRequest = await FriendRequest.findById(request._id).populate("sender");
+      const populatedRequest = await FriendRequest.findById(request._id).populate(
+        "sender receiver",
+        userPublicFields
+      );
       emitToUser(receiverId, "newFriendRequest", populatedRequest);
 
       return populatedRequest;
@@ -97,6 +123,43 @@ export const resolvers = {
         content: content.trim(),
       });
       return await post.populate("author");
+    },
+    togglePostLike: async (_, { postId }, { userId }) => {
+      if (!userId) throw new Error("Unauthorized");
+
+      const post = await Post.findById(postId);
+      if (!post) throw new Error("Post not found");
+
+      const likeIndex = post.likes.findIndex((like) => getIdString(like) === userId);
+      if (likeIndex === -1) {
+        post.likes.push(userId);
+      } else {
+        post.likes.splice(likeIndex, 1);
+      }
+
+      await post.save();
+      return await post.populate([
+        { path: "author" },
+        { path: "likes" },
+        { path: "comments", populate: { path: "author" } },
+      ]);
+    },
+    createComment: async (_, { postId, content }, { userId }) => {
+      if (!userId) throw new Error("Unauthorized");
+      if (!content || !content.trim()) throw new Error("Comment content is required");
+
+      const post = await Post.findById(postId);
+      if (!post) throw new Error("Post not found");
+
+      const comment = await Comment.create({
+        author: userId,
+        content: content.trim(),
+      });
+
+      post.comments.push(comment._id);
+      await post.save();
+
+      return await comment.populate("author");
     },
     acceptFriendRequest: async (_, { requestId }, { userId }) => {
       if (!userId) throw new Error("Unauthorized");
@@ -171,6 +234,11 @@ export const resolvers = {
   },
   Post: {
     id: (post) => post._id.toString(),
+    likesCount: (post) => post.likes?.length || 0,
+    isLiked: (post, _, { userId }) => {
+      if (!userId) return false;
+      return Boolean(post.likes?.some((like) => getIdString(like) === userId));
+    },
   },
   FriendRequest: {
     id: (req) => req._id.toString(),
@@ -183,5 +251,8 @@ export const resolvers = {
   },
   Message: {
     id: (msg) => msg._id.toString(),
+  },
+  Comment: {
+    id: (comment) => comment._id.toString(),
   },
 };
