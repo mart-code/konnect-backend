@@ -59,6 +59,7 @@ export const typeDefs = `#graphql
 
   type Query {
     me: User
+    getAllUsers: [User]
     getFeed: [Post]
     getFriends: [User]
     getPendingRequests: [FriendRequest]

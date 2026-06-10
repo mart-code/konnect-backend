@@ -25,6 +25,18 @@ export const searchUsers = async (req, res) => {
   }
 };
 
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await  User.find({ _id: { $ne: req.userId } }).select(userPublicFields);
+    return res.status(200).json(users);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
 // Send a friend request
 export const sendFriendRequest = async (req, res) => {
   try {
@@ -69,10 +81,7 @@ export const sendFriendRequest = async (req, res) => {
     });
 
     // Populate sender for the real-time notification
-    const populatedRequest = await FriendRequest.findById(request._id).populate(
-      "sender receiver",
-      userPublicFields
-    );
+    const populatedRequest = await FriendRequest.findById(request._id).populate("sender receiver", userPublicFields);
 
     // Notify receiver in real-time
     emitToUser(receiverId, "newFriendRequest", populatedRequest);
@@ -116,7 +125,7 @@ export const acceptFriendRequest = async (req, res) => {
 
     emitToUser(request.sender.toString(), "friendRequestAccepted", {
       friendId: req.userId,
-      friendName: me.firstName || me.email
+      friendName: me.firstName || me.email,
     });
 
     return res.status(200).json({ message: "Friend request accepted" });
@@ -151,9 +160,7 @@ export const rejectFriendRequest = async (req, res) => {
 // List current user's friends
 export const getFriends = async (req, res) => {
   try {
-    const user = await User.findById(req.userId)
-      .populate("friends", userPublicFields)
-      .select("friends");
+    const user = await User.findById(req.userId).populate("friends", userPublicFields).select("friends");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

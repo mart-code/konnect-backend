@@ -40,6 +40,14 @@ export const resolvers = {
       if (!user) return [];
       return user.friends;
     },
+    getAllUsers: async (_, __, { userId }) => {
+      if (!userId) return [];
+      return await User.find({ _id: { $ne: userId } }).select(userPublicFields).sort({
+        firstName: 1,
+        lastName: 1,
+        email: 1,
+      });
+    },
     getPendingRequests: async (_, __, { userId }) => {
       if (!userId) return [];
       return await FriendRequest.find({

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   searchUsers,
+  getAllUsers,
   sendFriendRequest,
   acceptFriendRequest,
   getFriends,
@@ -11,6 +12,7 @@ import { verifyToken } from "../middlewares/AuthMiddleware.js";
 
 const ContactRoutes = Router();
 
+ContactRoutes.get("/users", verifyToken, getAllUsers);
 ContactRoutes.get("/search", verifyToken, searchUsers);
 ContactRoutes.get("/friends", verifyToken, getFriends);
 ContactRoutes.get("/requests", verifyToken, getPendingRequests);
